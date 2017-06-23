@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-    consulAddress := flag.String("consul", "consul:8200", "address of consul server")
+    consulAddress := flag.String("consul", "consul:8500", "address of consul server")
     createToken   := flag.String("token", "", "add this specific token as almost root key")
 
     flag.Parse()
@@ -65,18 +65,22 @@ func main() {
                 panic(err)
             }
         }
-        if i == 0 {
-            vault.SetToken(re.RootToken)
-            sec, err := vault.Auth().Token().CreateOrphan(&vaultApi.TokenCreateRequest{
-                ID: *createToken,
-                TTL: "0",
-                DisplayName: "auto provisioned root token",
-            })
-            if err != nil {
-                panic(err)
-            }
-            fmt.Printf("created altroot token %v\n", sec)
-        }
     }
+
+    //need to do this after _all_ are unsealed
+    cs := css[0]
+    config2 := vaultApi.DefaultConfig()
+    config2.Address = "http://" + cs.Address + ":8200"
+    vault, err  := vaultApi.NewClient(config2)
+    vault.SetToken(re.RootToken)
+    sec, err := vault.Auth().Token().CreateOrphan(&vaultApi.TokenCreateRequest{
+        ID: *createToken,
+        TTL: "0",
+        DisplayName: "auto provisioned root token",
+    })
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("created altroot token %v\n", sec)
 }
 
