@@ -4,6 +4,7 @@ import (
     vaultApi   "github.com/hashicorp/vault/api"
     consulApi  "github.com/hashicorp/consul/api"
     "fmt"
+    "net"
 )
 
 
@@ -55,6 +56,26 @@ func main() {
             if err != nil {
                 panic(err)
             }
+        }
+
+        //continue everything waiting for a vault key
+        //a half-automated setup process can wait on each node with VAULT_TOKEN=$(netcat -ul 8200)
+
+        //TODO: we should send some other key, not the root key i guess
+        ServerAddr,err := net.ResolveUDPAddr("udp", cs.Address + ":8200")
+        if err != nil {
+            panic(err)
+        }
+
+        conn, err := net.DialUDP("udp", nil, ServerAddr)
+        if err != nil {
+            panic(err)
+        }
+        defer conn.Close()
+
+        _,err = conn.Write([]byte(re.RootToken))
+        if err != nil {
+            panic(err)
         }
     }
 }
