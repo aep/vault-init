@@ -5,6 +5,7 @@ import (
     consulApi  "github.com/hashicorp/consul/api"
     "fmt"
     "flag"
+    "time"
 )
 
 func main() {
@@ -67,7 +68,9 @@ func main() {
         }
     }
 
-    //need to do this after _all_ are unsealed
+    //need to do this after _all_ are unsealed and after some settling period apparantly
+	time.Sleep(2 * time.Second)
+
     cs := css[0]
     config2 := vaultApi.DefaultConfig()
     config2.Address = "http://" + cs.Address + ":8200"
