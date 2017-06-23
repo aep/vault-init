@@ -4,13 +4,21 @@ import (
     vaultApi   "github.com/hashicorp/vault/api"
     consulApi  "github.com/hashicorp/consul/api"
     "fmt"
-    "net"
+    "flag"
 )
 
-
-
 func main() {
-    consul, err := consulApi.NewClient(consulApi.DefaultConfig())
+
+    consulAddress := flag.String("consul", "consul:8200", "address of consul server")
+    createToken   := flag.String("token", "", "add this specific token as almost root key")
+
+    flag.Parse()
+
+    flag.PrintDefaults()
+
+    config := consulApi.DefaultConfig()
+    config.Address = *consulAddress
+    consul, err := consulApi.NewClient(config)
     if err != nil {
         panic(err)
     }
@@ -57,25 +65,17 @@ func main() {
                 panic(err)
             }
         }
-
-        //continue everything waiting for a vault key
-        //a half-automated setup process can wait on each node with VAULT_TOKEN=$(netcat -ul 8200)
-
-        //TODO: we should send some other key, not the root key i guess
-        ServerAddr,err := net.ResolveUDPAddr("udp", cs.Address + ":8200")
-        if err != nil {
-            panic(err)
-        }
-
-        conn, err := net.DialUDP("udp", nil, ServerAddr)
-        if err != nil {
-            panic(err)
-        }
-        defer conn.Close()
-
-        _,err = conn.Write([]byte(re.RootToken))
-        if err != nil {
-            panic(err)
+        if i == 0 {
+            vault.SetToken(re.RootToken)
+            sec, err := vault.Auth().Token().CreateOrphan(&vaultApi.TokenCreateRequest{
+                ID: *createToken,
+                TTL: "0",
+                DisplayName: "auto provisioned root token",
+            })
+            if err != nil {
+                panic(err)
+            }
+            fmt.Printf("created altroot token %v\n", sec)
         }
     }
 }
